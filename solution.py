@@ -26,6 +26,7 @@ def GetLocation(move_type, env, current_frame):
         North-West = 7
         NOOP = 8
         """
+        # default to noop
         coordinate = 8
     #Use absolute coordinates for the position of the "gun", coordinate space are defined below
     else:
@@ -35,25 +36,33 @@ def GetLocation(move_type, env, current_frame):
         Bottom right = (W, H) 
         """
         
-        
+        # convert to greyscale and blur
         processed_frame = cv2.cvtColor(current_frame, cv2.COLOR_RGB2GRAY)
         processed_frame = cv2.GaussianBlur(src=processed_frame, ksize=(5,5), sigmaX=0)
 
+        # instantiate previous frame at first run
         if previous_frame is None:
             previous_frame = processed_frame
         
+        # find the absolute difference between previous frame and the current one to see movement
         diff_frame = cv2.absdiff(previous_frame, processed_frame)
         previous_frame = processed_frame
 
+        # kernel for erosion
         kernel = np.ones((6,6))
         #diff_frame = cv2.dilate(diff_frame, kernel, 1)
 
+        # apply a thresholding to diff_frame to remove small differences (movements)
         threshholded_frame = cv2.threshold(src=diff_frame, thresh=100, maxval=255, type=cv2.THRESH_BINARY)[1]
+        
+        # erode result to make the resultant 'blobs' of movement smaller
         threshholded_frame = cv2.erode(src=threshholded_frame, kernel=kernel)
+
+        # parse x and y coords and send to game
         coordinatex = np.where(threshholded_frame == np.amax(threshholded_frame))[0][0]
         coordinatey = np.where(threshholded_frame == np.amax(threshholded_frame))[1][0]
         coordinate = [coordinatex, coordinatey]
-        #coordinate = env.action_space_abs.sample()
+
         print(coordinate)
     return [{'coordinate' : coordinate, 'move_type' : move_type}]
 
