@@ -62,7 +62,8 @@ def GetLocation(move_type, env, current_frame):
         coordinatex = np.where(threshholded_frame == np.amax(threshholded_frame))[0][0]
         coordinatey = np.where(threshholded_frame == np.amax(threshholded_frame))[1][0]
         coordinate = [coordinatex, coordinatey]
-
+        cv2.imshow("DEBUG", cv2.cvtColor((np.asarray(diff_frame)).transpose(), cv2.COLOR_RGB2BGR))
+        cv2.waitKey(1)
         print(coordinate)
     return [{'coordinate' : coordinate, 'move_type' : move_type}]
 
