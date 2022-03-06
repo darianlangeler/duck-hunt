@@ -9,9 +9,11 @@ Two random coordinate generator has been provided for testing purposes.
 Manual mode where you can use your mouse as also been added for testing purposes.
 """
 previous_frame = None
+previous_target = [0, 0]
 
 def GetLocation(move_type, env, current_frame):
     global previous_frame
+    global previous_target
     
     #Use relative coordinates to the current position of the "gun", defined as an integer below
     if move_type == "relative":
@@ -35,11 +37,19 @@ def GetLocation(move_type, env, current_frame):
         Upper left = (0,0)
         Bottom right = (W, H) 
         """
-        
+        # list of duck coords
+        duck_locations = []
+
+        # empty list for checking duck locations
+        empty = []
+
+        # store copy of current_frame for overlaying contours
+        overlay_frame = current_frame
+
         # convert to greyscale and blur
         processed_frame = cv2.cvtColor(current_frame, cv2.COLOR_RGB2GRAY)
         processed_frame = cv2.GaussianBlur(src=processed_frame, ksize=(5,5), sigmaX=0)
-
+        
         # instantiate previous frame at first run
         if previous_frame is None:
             previous_frame = processed_frame
@@ -50,20 +60,44 @@ def GetLocation(move_type, env, current_frame):
 
         # kernel for erosion
         kernel = np.ones((6,6))
-        #diff_frame = cv2.dilate(diff_frame, kernel, 1)
 
         # apply a thresholding to diff_frame to remove small differences (movements)
-        threshholded_frame = cv2.threshold(src=diff_frame, thresh=100, maxval=255, type=cv2.THRESH_BINARY)[1]
+        threshholded_frame = cv2.threshold(src=diff_frame, thresh=150, maxval=255, type=cv2.THRESH_BINARY)[1]
         
         # erode result to make the resultant 'blobs' of movement smaller
-        threshholded_frame = cv2.erode(src=threshholded_frame, kernel=kernel)
+        threshholded_frame = cv2.erode(src=diff_frame, kernel=kernel)
+
+        # create contours from the values found from abs_diff
+        contours, _ = cv2.findContours(image=threshholded_frame, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_TC89_L1)
+        for contour in contours:
+            # if contour is large enough, accept as duck
+            if cv2.contourArea(contour) > 200:
+                (x,y), _ = cv2.minEnclosingCircle(contour)
+                center = (int(x), int(y))
+                cv2.circle(overlay_frame, center, radius=15, color=(255, 0, 0), thickness=2)
+                duck_locations.append(center)
+        
+
+        # draw contours on debug window
+        cv2.drawContours(image=overlay_frame, contours=contours, contourIdx=-1, color=(0, 255, 0), thickness=2, lineType=cv2.LINE_AA)
 
         # parse x and y coords and send to game
-        coordinatex = np.where(threshholded_frame == np.amax(threshholded_frame))[0][0]
-        coordinatey = np.where(threshholded_frame == np.amax(threshholded_frame))[1][0]
-        coordinate = [coordinatex, coordinatey]
-        cv2.imshow("DEBUG", cv2.cvtColor((np.asarray(diff_frame)).transpose(), cv2.COLOR_RGB2BGR))
+        if duck_locations == empty:
+            coordinatex = 0
+            coordinatey = 0
+            coordinate = [coordinatex, coordinatey]
+        else:
+            coordinatey, coordinatex = max(duck_locations, key=lambda item:item[0])
+            coordinate = [coordinatex, coordinatey]
+            if coordinatex is previous_target[0] and len(duck_locations) > 0:
+                coordinatey, coordinatex = duck_locations.pop(0)
+                coordinate = [coordinatex, coordinatey]
+            
+        # Store previous target to make sure the same target isnt hit twice
+        previous_target = coordinate
+
+        # draw debug window
+        cv2.imshow("DEBUG0", cv2.cvtColor(overlay_frame.transpose(1,0,2), cv2.COLOR_RGB2BGR))
         cv2.waitKey(1)
-        print(coordinate)
     return [{'coordinate' : coordinate, 'move_type' : move_type}]
 
