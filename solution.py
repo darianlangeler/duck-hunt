@@ -2,6 +2,20 @@ import time
 import cv2
 import numpy as np
 
+def drawImg(img, cvtColor=cv2.COLOR_RGB2BGR):
+    nDims = img.ndim
+    if not (nDims == 3 or nDims == 2):
+        raise ValueError("ndims must be 2 or 3")
+    img = np.asarray(img)
+    if nDims == 3:
+        img = img.transpose(1, 0, 2)
+        cv2.cvtColor(img, cvtColor)
+    else:
+        img = img.transpose()
+    cv2.imshow("DEBUG", img)
+    cv2.waitKey(1)
+    return
+
 """
 Replace following with your own algorithm logic
 
@@ -53,7 +67,7 @@ def GetLocation(move_type, env, current_frame):
         # instantiate previous frame at first run
         if previous_frame is None:
             previous_frame = processed_frame
-        
+
         # find the absolute difference between previous frame and the current one to see movement
         diff_frame = cv2.absdiff(previous_frame, processed_frame)
         previous_frame = processed_frame
@@ -100,4 +114,3 @@ def GetLocation(move_type, env, current_frame):
         cv2.imshow("DEBUG0", cv2.cvtColor(overlay_frame.transpose(1,0,2), cv2.COLOR_RGB2BGR))
         cv2.waitKey(1)
     return [{'coordinate' : coordinate, 'move_type' : move_type}]
-
