@@ -62,6 +62,7 @@ def GetLocation(move_type, env, current_frame):
 
         # convert to greyscale and blur
         processed_frame = cv2.cvtColor(current_frame, cv2.COLOR_RGB2GRAY)
+        processed_frame = cv2.medianBlur(src=processed_frame, ksize=9)
         processed_frame = cv2.GaussianBlur(src=processed_frame, ksize=(5,5), sigmaX=0)
         
         # instantiate previous frame at first run
@@ -73,7 +74,7 @@ def GetLocation(move_type, env, current_frame):
         previous_frame = processed_frame
 
         # kernel for erosion
-        kernel = np.ones((6,6))
+        kernel = np.ones((7,7))
 
         # apply a thresholding to diff_frame to remove small differences (movements)
         threshholded_frame = cv2.threshold(src=diff_frame, thresh=150, maxval=255, type=cv2.THRESH_BINARY)[1]
@@ -84,8 +85,8 @@ def GetLocation(move_type, env, current_frame):
         # create contours from the values found from abs_diff
         contours, _ = cv2.findContours(image=threshholded_frame, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_TC89_L1)
         for contour in contours:
-            # if contour is large enough, accept as duck
-            if cv2.contourArea(contour) > 200:
+            # if contour is large enough (but not too large), accept as duck
+            if (cv2.contourArea(contour) > 600) and (cv2.contourArea(contour) < 1000):
                 (x,y), _ = cv2.minEnclosingCircle(contour)
                 center = (int(x), int(y))
                 cv2.circle(overlay_frame, center, radius=15, color=(255, 0, 0), thickness=2)
@@ -101,16 +102,19 @@ def GetLocation(move_type, env, current_frame):
             coordinatey = 0
             coordinate = [coordinatex, coordinatey]
         else:
-            coordinatey, coordinatex = max(duck_locations, key=lambda item:item[0])
-            coordinate = [coordinatex, coordinatey]
-            if coordinatex is previous_target[0] and len(duck_locations) > 0:
+            # try to find a duck that is less likely to be the same duck
+            while len(duck_locations) > 0: 
                 coordinatey, coordinatex = duck_locations.pop(0)
+                # coordinatey, coordinatex = max(duck_locations, key=lambda item:item[0])
                 coordinate = [coordinatex, coordinatey]
+                if coordinatex not in range(previous_target[0] - 100, previous_target[0] + 100) and len(duck_locations) > 0:
+                    break
             
         # Store previous target to make sure the same target isnt hit twice
         previous_target = coordinate
 
         # draw debug window
         cv2.imshow("DEBUG0", cv2.cvtColor(overlay_frame.transpose(1,0,2), cv2.COLOR_RGB2BGR))
+        cv2.imshow("DEBUG1", cv2.cvtColor(processed_frame, cv2.COLOR_RGB2BGR))
         cv2.waitKey(1)
     return [{'coordinate' : coordinate, 'move_type' : move_type}]
