@@ -1,3 +1,7 @@
+# Duck Hunt Computer Vision Project for ECE 471
+Goal: use python's openCV libraries to automate playing a game inspired by Nintendo's Duck Hunt for the NES.
+
+## Project Files Changelog:
 2022-02-24
 
 * Updated duck_hunt_main.py and solution.py to pass `current_frame` as `env.render()` cannot be used since PyGame is not thread-safe
