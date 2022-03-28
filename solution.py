@@ -2,17 +2,26 @@ import time
 import cv2
 import numpy as np
 
-def drawImg(img, cvtColor=cv2.COLOR_RGB2BGR):
-    nDims = img.ndim
-    if not (nDims == 3 or nDims == 2):
-        raise ValueError("ndims must be 2 or 3")
-    img = np.asarray(img)
-    if nDims == 3:
-        img = img.transpose(1, 0, 2)
-        cv2.cvtColor(img, cvtColor)
-    else:
-        img = img.transpose()
-    cv2.imshow("DEBUG", img)
+def visualizer(imgs, nrows, ncols, windowScale=1, cvtColor=cv2.COLOR_RGB2BGR):
+    for i in range(0, len(imgs)):
+        img = imgs[i]
+        nDims = img.ndim
+        if not (nDims == 3 or nDims == 2):
+            raise ValueError("ndims must be 2 or 3")
+        if nDims == 3:
+            img = cv2.cvtColor(img, cvtColor)
+        else:
+            img = np.stack((img, img, img), axis=2)
+        imgs[i] = img.transpose(1, 0, 2)
+        if i == 0:
+            concatenated = imgs[0]
+        else:
+            concatenated = np.hstack((concatenated, imgs[i]))
+    scaleFactor = windowScale/len(imgs)
+    concatenated = cv2.resize(concatenated, None, fx=scaleFactor, fy=scaleFactor)
+    windowName="Visualizer"
+    cv2.namedWindow(windowName)
+    cv2.imshow(windowName, concatenated)
     cv2.waitKey(1)
     return
 
@@ -110,7 +119,6 @@ def GetLocation(move_type, env, current_frame):
         # Store previous target to make sure the same target isnt hit twice
         previous_target = coordinate
 
-        # draw debug window
-        cv2.imshow("DEBUG0", cv2.cvtColor(overlay_frame.transpose(1,0,2), cv2.COLOR_RGB2BGR))
-        cv2.waitKey(1)
+        # Create debug window
+        visualizer([diff_frame, overlay_frame], nrows=1, ncols=2, windowScale=1.5)
     return [{'coordinate' : coordinate, 'move_type' : move_type}]
