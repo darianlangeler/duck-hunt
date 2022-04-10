@@ -47,7 +47,8 @@ def GetLocation(move_type, env, current_frame):
     threshhold = 25
     contour_amin = 900.0
     contour_amax = 5000.0
-    
+    bar_width = 50
+
     #Use relative coordinates to the current position of the "gun", defined as an integer below
     if move_type == "relative":
         """
@@ -129,9 +130,11 @@ def GetLocation(move_type, env, current_frame):
                 coordinatey, coordinatex = duck_locations.pop(0)
                 # coordinatey, coordinatex = max(duck_locations, key=lambda item:item[0])
                 coordinate = [coordinatex, coordinatey]
-                for previous_target in previous_targets:                    
-                    if coordinatex in range(previous_target[0] - 100, previous_target[0] + 100):
+                for previous_target in previous_targets:
+                    #print(f'Loc Length {len(duck_locations)} Coordinate: {coordinate}    Previous Target: xrange ({previous_target[0] - bar_width} {previous_target[0] + bar_width}); yrange ({previous_target[1]} {current_frame.shape[1]})')
+                    if (coordinatey >= previous_target[1]) and (coordinatex in range(previous_target[0] - bar_width, previous_target[0] + bar_width)):
                         found_target = False
+                        #print("FALSE")
                         break
 
                 if found_target == True:
@@ -139,6 +142,12 @@ def GetLocation(move_type, env, current_frame):
             
         # Store previous target to make sure the same target isnt hit twice
         cv2.circle(overlay_frame, (coordinatey, coordinatex), radius=15, color=(0, 0, 255), thickness=2)
+        for previous_target in previous_targets:
+            xcoords = (previous_target[0] - bar_width, previous_target[0] + bar_width)
+            ycoords = (previous_target[1], current_frame.shape[1])
+            pt1 = (ycoords[0], xcoords[0])
+            pt2 = (ycoords[1], xcoords[1])
+            cv2.rectangle(overlay_frame, pt1, pt2, color=(255, 0, 0), thickness=3)
         previous_targets.pop(0)
         previous_targets.append(coordinate)
 
